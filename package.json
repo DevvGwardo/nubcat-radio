@@ -1,0 +1,12 @@
+{
+  "name": "nubcat-radio",
+  "version": "1.0.0",
+  "description": "nubcat radio station - shuffle through 200+ nubcat songs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18"
+  }
+}
