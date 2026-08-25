@@ -339,11 +339,17 @@ let STATE = { tracks: [], filtered: [], queue: [], current: null, playing: false
 let HISTORY = [];
 
 async function init() {
-  const r = await fetch('/api/tracks');
+  const r = await fetch('tracks.json?v=' + Date.now(), {cache: 'no-store'});
+  if (!r.ok) { document.getElementById('trackCount').textContent = 'manifest error'; return; }
   const data = await r.json();
-  STATE.tracks = data.tracks;
+  STATE.tracks = data.tracks || [];
+  if (STATE.tracks.length === 0) {
+    document.getElementById('trackCount').textContent = 'no tracks found';
+    document.getElementById('npSub').textContent = 'catalog empty — check tracks.json';
+    return;
+  }
   STATE.filtered = [...STATE.tracks];
-  buildGenres(data.genres);
+  buildGenres(data.genres || []);
   shuffle();
   document.getElementById('trackCount').textContent = STATE.tracks.length + ' tracks';
   statusTime();
