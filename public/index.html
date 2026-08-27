@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#9ecdff">
-<title>nubcat radio</title>
+<title>nubcat radio — live</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -43,231 +43,93 @@ h1{font-size:28px; font-weight:800; letter-spacing:-.03em; margin:14px 0 4px}
 .unmute:active{transform:scale(.96)}
 .label{font-size:12px; font-weight:600; color:#5a7aa0; margin-top:12px; transition:opacity .3s}
 .count{font-size:11px; color:#8aa0c0; margin-top:14px}
+.live{font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#e24b6a; margin-top:8px; opacity:0; transition:opacity .3s}
 </style>
 </head>
 <body>
 <main class="card" aria-label="nubcat radio">
   <span class="badge"><span class="dot"></span><span id="listeners">— listening</span></span>
   <h1>nubcat radio</h1>
-  <div class="sub" id="sub">live station • shuffling all tracks</div>
+  <div class="sub" id="sub">live • true broadcast</div>
   <div class="track" id="track">&nbsp;</div>
-  <button class="unmute" id="unmuteBtn" aria-label="tap to listen">
+  <div class="live" id="live">● live</div>
+  <button class="unmute" id="btn" aria-label="tap to listen">
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
   </button>
-  <div class="label" id="unmuteLabel">tap to listen</div>
-  <div class="count" id="countExtra"></div>
+  <div class="label" id="label">tap to listen</div>
+  <div class="count" id="countExtra">connecting…</div>
 </main>
-<audio id="audioA" preload="metadata" crossorigin="anonymous"></audio>
-<audio id="audioB" preload="metadata" crossorigin="anonymous"></audio>
+<audio id="audio" preload="none" crossorigin="anonymous"></audio>
 <script>
-const audioA=document.getElementById('audioA'), audioB=document.getElementById('audioB');
-let active=audioA, inactive=audioB;
-let tracks=[], queue=[], pos=-1, unlocked=false;
-let currentStation=null, lastSlot=-1;
-let ctx, gainA, gainB, masterGain;
-let xfadeRaf=0;
+const audio=document.getElementById('audio');
 const els={
   listeners:document.getElementById('listeners'),
   sub:document.getElementById('sub'),
   track:document.getElementById('track'),
-  btn:document.getElementById('unmuteBtn'),
-  label:document.getElementById('unmuteLabel'),
-  extra:document.getElementById('countExtra')
+  btn:document.getElementById('btn'),
+  label:document.getElementById('label'),
+  extra:document.getElementById('countExtra'),
+  live:document.getElementById('live')
 };
-function fmt(s){ if(!s||isNaN(s)) return '0:00'; const m=Math.floor(s/60), sec=Math.floor(s%60); return m+':'+(sec<10?'0':'')+sec; }
-function ensureGraph(){
-  if(ctx) return;
-  ctx=new (window.AudioContext||window.webkitAudioContext)();
-  gainA=ctx.createGain(); gainB=ctx.createGain(); masterGain=ctx.createGain();
-  const srcA=ctx.createMediaElementSource(audioA), srcB=ctx.createMediaElementSource(audioB);
-  srcA.connect(gainA); srcB.connect(gainB);
-  gainA.connect(masterGain); gainB.connect(masterGain);
-  masterGain.connect(ctx.destination);
-  gainA.gain.value=1; gainB.gain.value=0; masterGain.gain.value=0;
+let unlocked=false;
+function updateListeners(n, streamN){
+  const total = typeof streamN==='number' ? streamN : n;
+  els.listeners.textContent = (total===1?'1 listening': total+' listening');
 }
-function unlock(){
-  if(unlocked) return;
-  unlocked=true;
-  ensureGraph();
-  if(ctx.state==='suspended') ctx.resume();
-  masterGain.gain.value=0.9;
-  active.muted=false; inactive.muted=false;
-  els.btn.style.opacity='0'; els.label.style.opacity='0';
-  setTimeout(()=>{ els.btn.style.display='none'; els.label.style.display='none'; }, 300);
-  if(active.paused && active.src) active.play().catch(()=>{});
+function setTrack(t){
+  if(!t){ els.track.textContent='\u00a0'; els.sub.textContent='live • true broadcast'; return; }
+  els.track.textContent = t.file.replace('.mp3','').replace(/-/g,' ');
+  els.sub.textContent = t.genre.replace(/-/g,' ');
 }
-els.btn.onclick=unlock;
-function updateListeners(n){ els.listeners.textContent = (n===1?'1 listening': n+' listening'); }
-function setTrackTitle(t){ els.track.textContent = t ? t.file.replace('.mp3','').replace(/-/g,' ') : '\u00a0'; els.sub.textContent = t ? t.genre.replace(/-/g,' ') : 'live station'; }
-function applyPendingOffset(audio){
-  const raw=audio.dataset.pendingOffset;
-  if(raw==null) return;
-  audio.dataset.pendingOffset='';
-  const off=parseFloat(raw);
-  if(isNaN(off)) return;
-  const dur=audio.duration;
-  if(!dur || isNaN(dur) || !isFinite(dur)) {
-    try{ audio.currentTime=off; }catch(e){}
-    return;
-  }
-  // if offset is beyond track length, start from 0 instead of playing 1-sec snippet loop
-  if(off >= dur - 1.5){
-    try{ audio.currentTime=0; }catch(e){}
-    return;
-  }
-  try{ audio.currentTime=Math.min(off, dur-0.5); }catch(e){}
-}
-function equalPowerCrossfade(fromGain, toGain, duration, onDone){
-  cancelAnimationFrame(xfadeRaf);
-  const start=performance.now();
-  // ensure starting values
-  fromGain.gain.cancelScheduledValues(0);
-  toGain.gain.cancelScheduledValues(0);
-  function tick(now){
-    const p=Math.min((now-start)/(duration*1000), 1);
-    // equal-power: cos curve
-    const fromVol=Math.cos(p * Math.PI/2);
-    const toVol=Math.cos((1-p) * Math.PI/2);
-    fromGain.gain.value=fromVol;
-    toGain.gain.value=toVol;
-    if(p<1) xfadeRaf=requestAnimationFrame(tick);
-    else if(onDone) onDone();
-  }
-  xfadeRaf=requestAnimationFrame(tick);
-}
-function applyStation(s, shouldPlay){
-  if(!s||!s.track) return;
-  // ignore duplicate slot — prevents snippet replay every 3s SSE
-  if(s.slot===lastSlot && currentStation && currentStation.track.file===s.track.file) {
-    // only gentle drift fix, no reload
-    const t=s.track;
-    setTrackTitle(t);
-    const alreadyActive = active.src && active.src.endsWith(t.file);
-    if(alreadyActive && unlocked && active.duration && isFinite(active.duration)){
-      const drift=Math.abs(active.currentTime - s.offset);
-      // only nudge if drift large AND offset is within track bounds (avoids snippet jump)
-      if(drift>8 && s.offset < active.duration - 2){
-        try{ active.currentTime=Math.min(s.offset, active.duration-0.5);}catch(e){}
-      }
-    }
-    return;
-  }
-  const t=s.track;
-  setTrackTitle(t);
-  lastSlot=s.slot;
-  currentStation=s;
-  const idx=queue.findIndex(x=>x.file===t.file);
-  if(idx>=0) pos=idx;
-  // preload next slot 12s before end to avoid gap
-  if(unlocked && s.offset > 168 && !s._prefetched){
-    s._prefetched=true;
-    fetch('/api/station?peek=15&v='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(d=>{
-      if(d.station && d.station.track && d.station.track.file!==t.file){
-        // warm browser cache for next audio
-        fetch('audio/'+d.station.track.file, {method:'HEAD', cache:'force-cache'}).catch(()=>{});
-        const pre = new Audio(); pre.preload='metadata'; pre.src='audio/'+d.station.track.file; pre.load();
-      }
-    }).catch(()=>{});
-  }
-  const alreadyActive = active.src && active.src.endsWith(t.file);
-  if(alreadyActive){
-    // same file but new slot (edge case after reboot) — gentle sync only
-    if(active.duration && isFinite(active.duration) && s.offset < active.duration - 2 && Math.abs(active.currentTime - s.offset) > 8){
-      try{ active.currentTime=Math.min(s.offset, active.duration-0.5);}catch(e){}
-    }
-    if(shouldPlay && active.paused) active.play().catch(()=>{});
-    return;
-  }
-  const target = unlocked ? inactive : active;
-  const other = target===active?inactive:active;
-  target.dataset.pendingOffset=String(s.offset);
-  target.src='audio/'+t.file; target.load();
-  if(shouldPlay){
-    ensureGraph(); if(ctx.state==='suspended') ctx.resume();
-    const start=()=>{
-      applyPendingOffset(target);
-      if(unlocked){
-        ensureGraph(); if(ctx.state==='suspended') ctx.resume();
-        const fromGain = other===audioA?gainA:gainB, toGain = target===audioA?gainA:gainB;
-        const hasOtherAudio = other.src && !other.paused && other.duration && !other.ended;
-        toGain.gain.value=0;
-        if(!hasOtherAudio) fromGain.gain.value=0;
-        else fromGain.gain.value=1;
-        target.play().then(()=>{
-          if(hasOtherAudio){
-            equalPowerCrossfade(fromGain, toGain, 5, ()=>{
-              try{ other.pause(); other.removeAttribute('src'); other.load(); }catch(e){}
-              active=target; inactive=other;
-            });
-          } else {
-            // no active audio to fade from — just snap gains to new target, no gap
-            toGain.gain.value=1; fromGain.gain.value=0;
-            try{ other.pause(); other.removeAttribute('src'); other.load(); }catch(e){}
-            active=target; inactive=other;
-          }
-        }).catch(()=> target.play().catch(()=>{}));
-      } else {
-        try{ other.pause(); }catch(e){}
-        if(target===audioA){ gainA.gain.value=1; gainB.gain.value=0; } else { gainA.gain.value=0; gainB.gain.value=1; }
-        target.play().then(()=>{ active=target; inactive=other; }).catch(()=>{});
-      }
-    };
-    if(target.readyState>=1) start(); else target.addEventListener('loadedmetadata', start, {once:true});
-  }
-}
-async function fetchStation(){
+async function fetchNow(){
   try{
-    const r=await fetch('/api/station?v='+Date.now(),{cache:'no-store'});
-    if(!r.ok) return null;
+    const r=await fetch('/api/nowplaying?v='+Date.now(),{cache:'no-store'});
     const d=await r.json();
-    if(d.station&&d.station.track){ updateListeners(d.listeners); return d.station; }
+    if(typeof d.streamListeners==='number' || typeof d.listeners==='number') updateListeners(d.listeners, d.streamListeners);
+    const b=d.broadcast;
+    if(b && b.track) setTrack(b.track);
+    else if(d.station && d.station.track) setTrack(d.station.track);
   }catch(e){}
-  return null;
 }
+fetchNow(); setInterval(fetchNow, 4000);
 try{
   const es=new EventSource('/api/listeners');
   es.onmessage=e=>{
-    let data=null; try{ data=JSON.parse(e.data);}catch{ data=null; }
-    if(data && typeof data.listeners==='number'){
-      updateListeners(data.listeners);
-      if(data.station&&data.station.track){
-        const s=data.station;
-        const isNewSlot = s.slot!==lastSlot || !currentStation || currentStation.track.file!==s.track.file;
-        if(isNewSlot) applyStation(s, unlocked);
-        else {
-          // still update title if needed (no reload)
-          if(currentStation && currentStation.track.file!==s.track.file) { currentStation=s; applyStation(s, unlocked); }
-          else currentStation=s;
-        }
-      }
-    }
+    try{
+      const d=JSON.parse(e.data);
+      if(typeof d.listeners==='number') updateListeners(d.listeners, d.broadcast?d.streamListeners:d.listeners);
+      const b=d.broadcast;
+      if(b && b.track) setTrack(b.track);
+      else if(d.station && d.station.track) setTrack(d.station.track);
+    }catch{}
   };
 }catch(e){}
-async function init(){
-  try{
-    const r=await fetch('tracks.json?v='+Date.now(),{cache:'no-store'});
-    const d=await r.json();
-    tracks=Array.isArray(d.tracks)?d.tracks:[];
-    if(!tracks.length){ els.sub.textContent='catalog empty'; return; }
-    queue=[...tracks]; for(let i=queue.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [queue[i],queue[j]]=[queue[j],queue[i]]; }
-    const s=await fetchStation();
-    if(s) applyStation(s, false);
-    ensureGraph();
-    if(s && active.src) { active.muted=false; active.play().catch(()=>{}); }
-  }catch(e){ els.sub.textContent='catalog error'; }
-  audioA.addEventListener('loadedmetadata', ()=> applyPendingOffset(audioA));
-  audioB.addEventListener('loadedmetadata', ()=> applyPendingOffset(audioB));
-  const onEnded=()=>{
-    // track ended before slot — don't replay snippet, wait for next slot
-    fetchStation().then(s=>{
-      if(!s) return;
-      if(s.slot===lastSlot) return; // same slot, would cause snippet loop — wait
-      applyStation(s, unlocked);
-    });
-  };
-  audioA.addEventListener('ended', onEnded); audioB.addEventListener('ended', onEnded);
-}
-init();
+
+els.btn.onclick=()=>{
+  if(unlocked) return;
+  unlocked=true;
+  audio.src='/stream?v='+Date.now();
+  audio.crossOrigin='anonymous';
+  audio.play().then(()=>{
+    els.btn.style.opacity='0'; els.label.style.opacity='0';
+    setTimeout(()=>{ els.btn.style.display='none'; els.label.style.display='none'; }, 300);
+    els.live.style.opacity='1';
+    els.extra.textContent='live stream • everyone hears the same';
+  }).catch(err=>{
+    unlocked=false;
+    els.extra.textContent='tap again — browser blocked autoplay';
+    console.log(err);
+  });
+};
+audio.addEventListener('error', ()=>{
+  if(unlocked){
+    els.extra.textContent='reconnecting…';
+    setTimeout(()=>{ audio.src='/stream?v='+Date.now(); audio.play().catch(()=>{}); }, 1500);
+  }
+});
+audio.addEventListener('stalled', ()=>{
+  if(unlocked) fetchNow();
+});
 </script>
 </body>
 </html>
