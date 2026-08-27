@@ -37,12 +37,11 @@ h1{font-size:28px; font-weight:800; letter-spacing:-.03em; margin:14px 0 4px}
   margin:22px auto 0; width:88px; height:88px; border-radius:50%; border:none;
   background:linear-gradient(135deg,#4d97f0,#2f7ed8); color:#fff;
   display:flex; align-items:center; justify-content:center; cursor:pointer;
-  box-shadow:0 10px 24px rgba(47,126,216,.35); transition:transform .15s;
+  box-shadow:0 10px 24px rgba(47,126,216,.35); transition:transform .15s, opacity .3s;
 }
 .unmute:hover{transform:scale(1.04)}
 .unmute:active{transform:scale(.96)}
-.unmute.muted{background:#fff; color:#2f7ed8; border:1.5px solid rgba(26,61,107,.14); box-shadow:0 6px 18px rgba(26,61,107,.12)}
-.label{font-size:12px; font-weight:600; color:#5a7aa0; margin-top:12px}
+.label{font-size:12px; font-weight:600; color:#5a7aa0; margin-top:12px; transition:opacity .3s}
 .count{font-size:11px; color:#8aa0c0; margin-top:14px}
 </style>
 </head>
@@ -52,10 +51,10 @@ h1{font-size:28px; font-weight:800; letter-spacing:-.03em; margin:14px 0 4px}
   <h1>nubcat radio</h1>
   <div class="sub" id="sub">live station • shuffling all tracks</div>
   <div class="track" id="track">&nbsp;</div>
-  <button class="unmute" id="unmuteBtn" aria-label="unmute">
-    <svg id="unmuteIcon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+  <button class="unmute" id="unmuteBtn" aria-label="tap to listen">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
   </button>
-  <div class="label" id="unmuteLabel">tap to unmute</div>
+  <div class="label" id="unmuteLabel">tap to listen</div>
   <div class="count" id="countExtra"></div>
 </main>
 <audio id="audioA" preload="metadata" crossorigin="anonymous"></audio>
@@ -63,15 +62,14 @@ h1{font-size:28px; font-weight:800; letter-spacing:-.03em; margin:14px 0 4px}
 <script>
 const audioA=document.getElementById('audioA'), audioB=document.getElementById('audioB');
 let active=audioA, inactive=audioB;
-let tracks=[], queue=[], pos=-1, isMuted=true, hasStarted=false;
-let currentStation=null, stationSlotSec=180;
-let ctx, analyser, gainA, gainB, masterGain;
+let tracks=[], queue=[], pos=-1, unlocked=false;
+let currentStation=null;
+let ctx, gainA, gainB, masterGain;
 const els={
   listeners:document.getElementById('listeners'),
   sub:document.getElementById('sub'),
   track:document.getElementById('track'),
   btn:document.getElementById('unmuteBtn'),
-  icon:document.getElementById('unmuteIcon'),
   label:document.getElementById('unmuteLabel'),
   extra:document.getElementById('countExtra')
 };
@@ -79,28 +77,25 @@ function fmt(s){ if(!s||isNaN(s)) return '0:00'; const m=Math.floor(s/60), sec=M
 function ensureGraph(){
   if(ctx) return;
   ctx=new (window.AudioContext||window.webkitAudioContext)();
-  analyser=ctx.createAnalyser(); analyser.fftSize=64;
   gainA=ctx.createGain(); gainB=ctx.createGain(); masterGain=ctx.createGain();
   const srcA=ctx.createMediaElementSource(audioA), srcB=ctx.createMediaElementSource(audioB);
   srcA.connect(gainA); srcB.connect(gainB);
   gainA.connect(masterGain); gainB.connect(masterGain);
   masterGain.connect(ctx.destination);
-  gainA.gain.value=1; gainB.gain.value=0; masterGain.gain.value=0; // muted
+  gainA.gain.value=1; gainB.gain.value=0; masterGain.gain.value=0;
 }
-function setMuted(m){
-  isMuted=m;
-  if(!ctx) ensureGraph();
-  if(ctx && ctx.state==='suspended') ctx.resume();
-  masterGain.gain.value = m ? 0 : 0.9;
+function unlock(){
+  if(unlocked) return;
+  unlocked=true;
+  ensureGraph();
+  if(ctx.state==='suspended') ctx.resume();
+  masterGain.gain.value=0.9;
   active.muted=false; inactive.muted=false;
-  els.btn.classList.toggle('muted', m);
-  els.label.textContent = m ? 'tap to unmute' : 'tap to mute';
-  els.btn.setAttribute('aria-label', m ? 'unmute' : 'mute');
-  els.icon.innerHTML = m
-    ? '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line>'
-    : '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>';
+  els.btn.style.opacity='0'; els.label.style.opacity='0';
+  setTimeout(()=>{ els.btn.style.display='none'; els.label.style.display='none'; }, 300);
+  if(active.paused && active.src) active.play().catch(()=>{});
 }
-els.btn.onclick=()=>{ hasStarted=true; ensureGraph(); setMuted(!isMuted); if(active.paused) active.play().catch(()=>{}); };
+els.btn.onclick=unlock;
 function updateListeners(n){ els.listeners.textContent = (n===1?'1 listening': n+' listening'); }
 function setTrackTitle(t){ els.track.textContent = t ? t.file.replace('.mp3','').replace(/-/g,' ') : '\u00a0'; els.sub.textContent = t ? t.genre.replace(/-/g,' ') : 'live station'; }
 function applyStation(s, shouldPlay){
@@ -108,8 +103,7 @@ function applyStation(s, shouldPlay){
   const t=s.track;
   setTrackTitle(t);
   const idx=queue.findIndex(x=>x.file===t.file);
-  if(idx>=0) pos=idx; else { queue=[...tracks]; pos=queue.findIndex(x=>x.file===t.file); }
-  els.extra.textContent = 'slot '+(s.slot+1)+'/'+s.queueLength+' • +'+fmt(s.offset);
+  if(idx>=0) pos=idx;
   const alreadyActive = active.src && active.src.endsWith(t.file);
   if(alreadyActive){
     if(active.duration && Math.abs(active.currentTime - s.offset) > 4){
@@ -118,14 +112,14 @@ function applyStation(s, shouldPlay){
     if(shouldPlay && active.paused) active.play().catch(()=>{});
     return;
   }
-  const target = (hasStarted && !isMuted) ? inactive : active;
+  const target = unlocked ? inactive : active;
   const other = target===active?inactive:active;
   target.dataset.pendingOffset=String(s.offset);
   target.src='audio/'+t.file; target.load();
   if(shouldPlay){
     ensureGraph(); if(ctx.state==='suspended') ctx.resume();
     const start=()=>{
-      if(hasStarted && !isMuted && other.src && !other.paused){
+      if(unlocked && other.src && !other.paused){
         const now=ctx.currentTime;
         const fromGain = other===audioA?gainA:gainB, toGain = target===audioA?gainA:gainB;
         fromGain.gain.cancelScheduledValues(now); toGain.gain.cancelScheduledValues(now);
@@ -149,7 +143,7 @@ async function fetchStation(){
     const r=await fetch('/api/station?v='+Date.now(),{cache:'no-store'});
     if(!r.ok) return null;
     const d=await r.json();
-    if(d.station&&d.station.track){ stationSlotSec=d.slotSec||180; currentStation=d.station; updateListeners(d.listeners); return d.station; }
+    if(d.station&&d.station.track){ currentStation=d.station; updateListeners(d.listeners); return d.station; }
   }catch(e){}
   return null;
 }
@@ -160,9 +154,8 @@ try{
     if(data && typeof data.listeners==='number'){
       updateListeners(data.listeners);
       if(data.station&&data.station.track){
-        stationSlotSec=data.slotSec||180;
         const s=data.station; const isNew=!currentStation||currentStation.track.file!==s.track.file;
-        currentStation=s; if(isNew) applyStation(s, hasStarted && !isMuted);
+        currentStation=s; if(isNew) applyStation(s, unlocked);
       }
     }
   };
@@ -176,13 +169,12 @@ async function init(){
     queue=[...tracks]; for(let i=queue.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [queue[i],queue[j]]=[queue[j],queue[i]]; }
     const s=await fetchStation();
     if(s) applyStation(s, false);
-    // autoplay muted
     ensureGraph();
-    if(s && active.src) { active.muted=false; active.play().catch(()=>{}); hasStarted=false; }
+    if(s && active.src) { active.muted=false; active.play().catch(()=>{}); }
   }catch(e){ els.sub.textContent='catalog error'; }
   audioA.addEventListener('loadedmetadata', ()=>{ if(audioA.dataset.pendingOffset){ const off=parseFloat(audioA.dataset.pendingOffset); audioA.dataset.pendingOffset=''; if(!isNaN(off)) try{ audioA.currentTime=Math.min(off, audioA.duration-0.5);}catch(e){} } });
   audioB.addEventListener('loadedmetadata', ()=>{ if(audioB.dataset.pendingOffset){ const off=parseFloat(audioB.dataset.pendingOffset); audioB.dataset.pendingOffset=''; if(!isNaN(off)) try{ audioB.currentTime=Math.min(off, audioB.duration-0.5);}catch(e){} } });
-  const onEnded=()=>{ fetchStation().then(s=>{ if(s) applyStation(s, hasStarted && !isMuted); }); };
+  const onEnded=()=>{ fetchStation().then(s=>{ if(s) applyStation(s, unlocked); }); };
   audioA.addEventListener('ended', onEnded); audioB.addEventListener('ended', onEnded);
 }
 init();
