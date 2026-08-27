@@ -1,1 +1,318 @@
-{"tracks": [{"file": "country-21.mp3", "genre": "country", "num": 21, "size_kb": 4241}, {"file": "country-22.mp3", "genre": "country", "num": 22, "size_kb": 4586}, {"file": "country-23.mp3", "genre": "country", "num": 23, "size_kb": 3327}, {"file": "country-24.mp3", "genre": "country", "num": 24, "size_kb": 4105}, {"file": "delta-blues-21.mp3", "genre": "delta-blues", "num": 21, "size_kb": 5060}, {"file": "delta-blues-22.mp3", "genre": "delta-blues", "num": 22, "size_kb": 4435}, {"file": "delta-blues-23.mp3", "genre": "delta-blues", "num": 23, "size_kb": 5068}, {"file": "disco-21.mp3", "genre": "disco", "num": 21, "size_kb": 4646}, {"file": "disco-22.mp3", "genre": "disco", "num": 22, "size_kb": 4799}, {"file": "disco-23.mp3", "genre": "disco", "num": 23, "size_kb": 3240}, {"file": "drum-and-bass-21.mp3", "genre": "drum-and-bass", "num": 21, "size_kb": 3362}, {"file": "drum-and-bass-22.mp3", "genre": "drum-and-bass", "num": 22, "size_kb": 4346}, {"file": "drum-and-bass-23.mp3", "genre": "drum-and-bass", "num": 23, "size_kb": 3453}, {"file": "drum-and-bass-24.mp3", "genre": "drum-and-bass", "num": 24, "size_kb": 4516}, {"file": "dubstep-21.mp3", "genre": "dubstep", "num": 21, "size_kb": 2911}, {"file": "dubstep-22.mp3", "genre": "dubstep", "num": 22, "size_kb": 2525}, {"file": "dubstep-23.mp3", "genre": "dubstep", "num": 23, "size_kb": 3721}, {"file": "grunge-21.mp3", "genre": "grunge", "num": 21, "size_kb": 5065}, {"file": "grunge-22.mp3", "genre": "grunge", "num": 22, "size_kb": 4238}, {"file": "grunge-23.mp3", "genre": "grunge", "num": 23, "size_kb": 5732}, {"file": "jazz-21.mp3", "genre": "jazz", "num": 21, "size_kb": 3977}, {"file": "jazz-22.mp3", "genre": "jazz", "num": 22, "size_kb": 4457}, {"file": "jazz-23.mp3", "genre": "jazz", "num": 23, "size_kb": 4410}, {"file": "k-pop-21.mp3", "genre": "k-pop", "num": 21, "size_kb": 2507}, {"file": "k-pop-22.mp3", "genre": "k-pop", "num": 22, "size_kb": 2678}, {"file": "k-pop-23.mp3", "genre": "k-pop", "num": 23, "size_kb": 2843}, {"file": "opera-21.mp3", "genre": "opera", "num": 21, "size_kb": 4924}, {"file": "opera-22.mp3", "genre": "opera", "num": 22, "size_kb": 3418}, {"file": "opera-23.mp3", "genre": "opera", "num": 23, "size_kb": 3840}, {"file": "reggaeton-21.mp3", "genre": "reggaeton", "num": 21, "size_kb": 3665}, {"file": "reggaeton-22.mp3", "genre": "reggaeton", "num": 22, "size_kb": 3987}, {"file": "reggaeton-23.mp3", "genre": "reggaeton", "num": 23, "size_kb": 2693}, {"file": "reggaeton-24.mp3", "genre": "reggaeton", "num": 24, "size_kb": 3122}, {"file": "synthwave-21.mp3", "genre": "synthwave", "num": 21, "size_kb": 3349}, {"file": "synthwave-22.mp3", "genre": "synthwave", "num": 22, "size_kb": 4248}, {"file": "synthwave-23.mp3", "genre": "synthwave", "num": 23, "size_kb": 3592}, {"file": "uk-drill-21.mp3", "genre": "uk-drill", "num": 21, "size_kb": 2976}, {"file": "uk-drill-22.mp3", "genre": "uk-drill", "num": 22, "size_kb": 2389}, {"file": "uk-drill-23.mp3", "genre": "uk-drill", "num": 23, "size_kb": 2181}], "genres": ["country", "delta-blues", "disco", "drum-and-bass", "dubstep", "grunge", "jazz", "k-pop", "opera", "reggaeton", "synthwave", "uk-drill"]}
+{
+  "tracks": [
+    {
+      "file": "country-21.mp3",
+      "genre": "country",
+      "num": 21,
+      "size_kb": 4241
+    },
+    {
+      "file": "country-22.mp3",
+      "genre": "country",
+      "num": 22,
+      "size_kb": 4586
+    },
+    {
+      "file": "country-23.mp3",
+      "genre": "country",
+      "num": 23,
+      "size_kb": 3327
+    },
+    {
+      "file": "country-24.mp3",
+      "genre": "country",
+      "num": 24,
+      "size_kb": 4105
+    },
+    {
+      "file": "delta-blues-21.mp3",
+      "genre": "delta-blues",
+      "num": 21,
+      "size_kb": 5060
+    },
+    {
+      "file": "delta-blues-22.mp3",
+      "genre": "delta-blues",
+      "num": 22,
+      "size_kb": 4435
+    },
+    {
+      "file": "delta-blues-23.mp3",
+      "genre": "delta-blues",
+      "num": 23,
+      "size_kb": 5068
+    },
+    {
+      "file": "delta-blues-24.mp3",
+      "genre": "delta-blues",
+      "num": 24,
+      "size_kb": 4403
+    },
+    {
+      "file": "disco-21.mp3",
+      "genre": "disco",
+      "num": 21,
+      "size_kb": 4646
+    },
+    {
+      "file": "disco-22.mp3",
+      "genre": "disco",
+      "num": 22,
+      "size_kb": 4799
+    },
+    {
+      "file": "disco-23.mp3",
+      "genre": "disco",
+      "num": 23,
+      "size_kb": 3240
+    },
+    {
+      "file": "disco-24.mp3",
+      "genre": "disco",
+      "num": 24,
+      "size_kb": 5140
+    },
+    {
+      "file": "drum-and-bass-21.mp3",
+      "genre": "drum-and-bass",
+      "num": 21,
+      "size_kb": 3362
+    },
+    {
+      "file": "drum-and-bass-22.mp3",
+      "genre": "drum-and-bass",
+      "num": 22,
+      "size_kb": 4346
+    },
+    {
+      "file": "drum-and-bass-23.mp3",
+      "genre": "drum-and-bass",
+      "num": 23,
+      "size_kb": 3453
+    },
+    {
+      "file": "drum-and-bass-24.mp3",
+      "genre": "drum-and-bass",
+      "num": 24,
+      "size_kb": 4516
+    },
+    {
+      "file": "drum-and-bass-25.mp3",
+      "genre": "drum-and-bass",
+      "num": 25,
+      "size_kb": 3593
+    },
+    {
+      "file": "dubstep-21.mp3",
+      "genre": "dubstep",
+      "num": 21,
+      "size_kb": 2911
+    },
+    {
+      "file": "dubstep-22.mp3",
+      "genre": "dubstep",
+      "num": 22,
+      "size_kb": 2525
+    },
+    {
+      "file": "dubstep-23.mp3",
+      "genre": "dubstep",
+      "num": 23,
+      "size_kb": 3721
+    },
+    {
+      "file": "dubstep-24.mp3",
+      "genre": "dubstep",
+      "num": 24,
+      "size_kb": 4555
+    },
+    {
+      "file": "grunge-21.mp3",
+      "genre": "grunge",
+      "num": 21,
+      "size_kb": 5065
+    },
+    {
+      "file": "grunge-22.mp3",
+      "genre": "grunge",
+      "num": 22,
+      "size_kb": 4238
+    },
+    {
+      "file": "grunge-23.mp3",
+      "genre": "grunge",
+      "num": 23,
+      "size_kb": 5732
+    },
+    {
+      "file": "grunge-24.mp3",
+      "genre": "grunge",
+      "num": 24,
+      "size_kb": 4760
+    },
+    {
+      "file": "jazz-21.mp3",
+      "genre": "jazz",
+      "num": 21,
+      "size_kb": 3977
+    },
+    {
+      "file": "jazz-22.mp3",
+      "genre": "jazz",
+      "num": 22,
+      "size_kb": 4457
+    },
+    {
+      "file": "jazz-23.mp3",
+      "genre": "jazz",
+      "num": 23,
+      "size_kb": 4410
+    },
+    {
+      "file": "jazz-24.mp3",
+      "genre": "jazz",
+      "num": 24,
+      "size_kb": 5431
+    },
+    {
+      "file": "k-pop-21.mp3",
+      "genre": "k-pop",
+      "num": 21,
+      "size_kb": 2507
+    },
+    {
+      "file": "k-pop-22.mp3",
+      "genre": "k-pop",
+      "num": 22,
+      "size_kb": 2678
+    },
+    {
+      "file": "k-pop-23.mp3",
+      "genre": "k-pop",
+      "num": 23,
+      "size_kb": 2843
+    },
+    {
+      "file": "k-pop-24.mp3",
+      "genre": "k-pop",
+      "num": 24,
+      "size_kb": 2401
+    },
+    {
+      "file": "opera-21.mp3",
+      "genre": "opera",
+      "num": 21,
+      "size_kb": 4924
+    },
+    {
+      "file": "opera-22.mp3",
+      "genre": "opera",
+      "num": 22,
+      "size_kb": 3418
+    },
+    {
+      "file": "opera-23.mp3",
+      "genre": "opera",
+      "num": 23,
+      "size_kb": 3840
+    },
+    {
+      "file": "opera-24.mp3",
+      "genre": "opera",
+      "num": 24,
+      "size_kb": 3383
+    },
+    {
+      "file": "reggaeton-21.mp3",
+      "genre": "reggaeton",
+      "num": 21,
+      "size_kb": 3665
+    },
+    {
+      "file": "reggaeton-22.mp3",
+      "genre": "reggaeton",
+      "num": 22,
+      "size_kb": 3987
+    },
+    {
+      "file": "reggaeton-23.mp3",
+      "genre": "reggaeton",
+      "num": 23,
+      "size_kb": 2693
+    },
+    {
+      "file": "reggaeton-24.mp3",
+      "genre": "reggaeton",
+      "num": 24,
+      "size_kb": 3122
+    },
+    {
+      "file": "reggaeton-25.mp3",
+      "genre": "reggaeton",
+      "num": 25,
+      "size_kb": 3898
+    },
+    {
+      "file": "synthwave-21.mp3",
+      "genre": "synthwave",
+      "num": 21,
+      "size_kb": 3349
+    },
+    {
+      "file": "synthwave-22.mp3",
+      "genre": "synthwave",
+      "num": 22,
+      "size_kb": 4248
+    },
+    {
+      "file": "synthwave-23.mp3",
+      "genre": "synthwave",
+      "num": 23,
+      "size_kb": 3592
+    },
+    {
+      "file": "synthwave-24.mp3",
+      "genre": "synthwave",
+      "num": 24,
+      "size_kb": 5161
+    },
+    {
+      "file": "uk-drill-21.mp3",
+      "genre": "uk-drill",
+      "num": 21,
+      "size_kb": 2976
+    },
+    {
+      "file": "uk-drill-22.mp3",
+      "genre": "uk-drill",
+      "num": 22,
+      "size_kb": 2389
+    },
+    {
+      "file": "uk-drill-23.mp3",
+      "genre": "uk-drill",
+      "num": 23,
+      "size_kb": 2181
+    },
+    {
+      "file": "uk-drill-24.mp3",
+      "genre": "uk-drill",
+      "num": 24,
+      "size_kb": 3626
+    }
+  ],
+  "genres": [
+    "country",
+    "delta-blues",
+    "disco",
+    "drum-and-bass",
+    "dubstep",
+    "grunge",
+    "jazz",
+    "k-pop",
+    "opera",
+    "reggaeton",
+    "synthwave",
+    "uk-drill"
+  ]
+}
