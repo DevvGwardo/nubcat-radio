@@ -25,15 +25,32 @@ function readTracks() {
 let stationQueue = [];
 function buildStationQueue() {
   const { tracks } = readTracks();
-  const q = [...tracks];
-  for (let i = q.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [q[i], q[j]] = [q[j], q[i]];
+  if (!stationQueue.length) {
+    const q = [...tracks];
+    for (let i = q.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [q[i], q[j]] = [q[j], q[i]];
+    }
+    stationQueue = q;
+    return;
   }
-  stationQueue = q;
+  // stable update: keep existing order, only append new files (shuffled) and drop deleted
+  const existing = new Set(stationQueue.map(t => t.file));
+  const stillExists = new Set(tracks.map(t => t.file));
+  // drop deleted
+  stationQueue = stationQueue.filter(t => stillExists.has(t.file));
+  const newTracks = tracks.filter(t => !existing.has(t.file));
+  if (newTracks.length) {
+    for (let i = newTracks.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newTracks[i], newTracks[j]] = [newTracks[j], newTracks[i]];
+    }
+    stationQueue.push(...newTracks);
+    console.log(`station queue: +${newTracks.length} new tracks → ${stationQueue.length} total`);
+  }
 }
 buildStationQueue();
-// rebuild periodically to pick up new files from volume uploads without restart
+// stable check every 60s — only appends new files, never reshuffles existing order (fixes snippet loop)
 setInterval(buildStationQueue, 60000);
 
 function getStation() {

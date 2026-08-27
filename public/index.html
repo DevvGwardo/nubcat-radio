@@ -63,8 +63,9 @@ h1{font-size:28px; font-weight:800; letter-spacing:-.03em; margin:14px 0 4px}
 const audioA=document.getElementById('audioA'), audioB=document.getElementById('audioB');
 let active=audioA, inactive=audioB;
 let tracks=[], queue=[], pos=-1, unlocked=false;
-let currentStation=null;
+let currentStation=null, lastSlot=-1;
 let ctx, gainA, gainB, masterGain;
+let xfadeRaf=0;
 const els={
   listeners:document.getElementById('listeners'),
   sub:document.getElementById('sub'),
@@ -98,15 +99,69 @@ function unlock(){
 els.btn.onclick=unlock;
 function updateListeners(n){ els.listeners.textContent = (n===1?'1 listening': n+' listening'); }
 function setTrackTitle(t){ els.track.textContent = t ? t.file.replace('.mp3','').replace(/-/g,' ') : '\u00a0'; els.sub.textContent = t ? t.genre.replace(/-/g,' ') : 'live station'; }
+function applyPendingOffset(audio){
+  const raw=audio.dataset.pendingOffset;
+  if(raw==null) return;
+  audio.dataset.pendingOffset='';
+  const off=parseFloat(raw);
+  if(isNaN(off)) return;
+  const dur=audio.duration;
+  if(!dur || isNaN(dur) || !isFinite(dur)) {
+    try{ audio.currentTime=off; }catch(e){}
+    return;
+  }
+  // if offset is beyond track length, start from 0 instead of playing 1-sec snippet loop
+  if(off >= dur - 1.5){
+    try{ audio.currentTime=0; }catch(e){}
+    return;
+  }
+  try{ audio.currentTime=Math.min(off, dur-0.5); }catch(e){}
+}
+function equalPowerCrossfade(fromGain, toGain, duration, onDone){
+  cancelAnimationFrame(xfadeRaf);
+  const start=performance.now();
+  // ensure starting values
+  fromGain.gain.cancelScheduledValues(0);
+  toGain.gain.cancelScheduledValues(0);
+  function tick(now){
+    const p=Math.min((now-start)/(duration*1000), 1);
+    // equal-power: cos curve
+    const fromVol=Math.cos(p * Math.PI/2);
+    const toVol=Math.cos((1-p) * Math.PI/2);
+    fromGain.gain.value=fromVol;
+    toGain.gain.value=toVol;
+    if(p<1) xfadeRaf=requestAnimationFrame(tick);
+    else if(onDone) onDone();
+  }
+  xfadeRaf=requestAnimationFrame(tick);
+}
 function applyStation(s, shouldPlay){
   if(!s||!s.track) return;
+  // ignore duplicate slot — prevents snippet replay every 3s SSE
+  if(s.slot===lastSlot && currentStation && currentStation.track.file===s.track.file) {
+    // only gentle drift fix, no reload
+    const t=s.track;
+    setTrackTitle(t);
+    const alreadyActive = active.src && active.src.endsWith(t.file);
+    if(alreadyActive && unlocked && active.duration && isFinite(active.duration)){
+      const drift=Math.abs(active.currentTime - s.offset);
+      // only nudge if drift large AND offset is within track bounds (avoids snippet jump)
+      if(drift>8 && s.offset < active.duration - 2){
+        try{ active.currentTime=Math.min(s.offset, active.duration-0.5);}catch(e){}
+      }
+    }
+    return;
+  }
   const t=s.track;
   setTrackTitle(t);
+  lastSlot=s.slot;
+  currentStation=s;
   const idx=queue.findIndex(x=>x.file===t.file);
   if(idx>=0) pos=idx;
   const alreadyActive = active.src && active.src.endsWith(t.file);
   if(alreadyActive){
-    if(active.duration && Math.abs(active.currentTime - s.offset) > 4){
+    // same file but new slot (edge case after reboot) — gentle sync only
+    if(active.duration && isFinite(active.duration) && s.offset < active.duration - 2 && Math.abs(active.currentTime - s.offset) > 8){
       try{ active.currentTime=Math.min(s.offset, active.duration-0.5);}catch(e){}
     }
     if(shouldPlay && active.paused) active.play().catch(()=>{});
@@ -119,19 +174,21 @@ function applyStation(s, shouldPlay){
   if(shouldPlay){
     ensureGraph(); if(ctx.state==='suspended') ctx.resume();
     const start=()=>{
-      if(unlocked && other.src && !other.paused){
-        const now=ctx.currentTime;
+      applyPendingOffset(target);
+      if(unlocked && other.src && !other.paused && other.duration){
         const fromGain = other===audioA?gainA:gainB, toGain = target===audioA?gainA:gainB;
-        fromGain.gain.cancelScheduledValues(now); toGain.gain.cancelScheduledValues(now);
-        fromGain.gain.setValueAtTime(fromGain.gain.value, now);
-        toGain.gain.setValueAtTime(0, now);
+        // start target silent, ensure it plays
+        toGain.gain.value=0; fromGain.gain.value=1;
         target.play().then(()=>{
-          toGain.gain.linearRampToValueAtTime(1, now+8);
-          fromGain.gain.linearRampToValueAtTime(0, now+8);
-          setTimeout(()=>{ try{ other.pause(); other.src=''; }catch(e){} active=target; inactive=other; }, 8200);
+          equalPowerCrossfade(fromGain, toGain, 5, ()=>{
+            try{ other.pause(); other.removeAttribute('src'); other.load(); }catch(e){}
+            active=target; inactive=other;
+          });
         }).catch(()=> target.play().catch(()=>{}));
       } else {
         try{ other.pause(); }catch(e){}
+        // set gains for non-crossfade case
+        if(target===audioA){ gainA.gain.value=1; gainB.gain.value=0; } else { gainA.gain.value=0; gainB.gain.value=1; }
         target.play().then(()=>{ active=target; inactive=other; }).catch(()=>{});
       }
     };
@@ -143,7 +200,7 @@ async function fetchStation(){
     const r=await fetch('/api/station?v='+Date.now(),{cache:'no-store'});
     if(!r.ok) return null;
     const d=await r.json();
-    if(d.station&&d.station.track){ currentStation=d.station; updateListeners(d.listeners); return d.station; }
+    if(d.station&&d.station.track){ updateListeners(d.listeners); return d.station; }
   }catch(e){}
   return null;
 }
@@ -154,8 +211,14 @@ try{
     if(data && typeof data.listeners==='number'){
       updateListeners(data.listeners);
       if(data.station&&data.station.track){
-        const s=data.station; const isNew=!currentStation||currentStation.track.file!==s.track.file;
-        currentStation=s; if(isNew) applyStation(s, unlocked);
+        const s=data.station;
+        const isNewSlot = s.slot!==lastSlot || !currentStation || currentStation.track.file!==s.track.file;
+        if(isNewSlot) applyStation(s, unlocked);
+        else {
+          // still update title if needed (no reload)
+          if(currentStation && currentStation.track.file!==s.track.file) { currentStation=s; applyStation(s, unlocked); }
+          else currentStation=s;
+        }
       }
     }
   };
@@ -172,9 +235,16 @@ async function init(){
     ensureGraph();
     if(s && active.src) { active.muted=false; active.play().catch(()=>{}); }
   }catch(e){ els.sub.textContent='catalog error'; }
-  audioA.addEventListener('loadedmetadata', ()=>{ if(audioA.dataset.pendingOffset){ const off=parseFloat(audioA.dataset.pendingOffset); audioA.dataset.pendingOffset=''; if(!isNaN(off)) try{ audioA.currentTime=Math.min(off, audioA.duration-0.5);}catch(e){} } });
-  audioB.addEventListener('loadedmetadata', ()=>{ if(audioB.dataset.pendingOffset){ const off=parseFloat(audioB.dataset.pendingOffset); audioB.dataset.pendingOffset=''; if(!isNaN(off)) try{ audioB.currentTime=Math.min(off, audioB.duration-0.5);}catch(e){} } });
-  const onEnded=()=>{ fetchStation().then(s=>{ if(s) applyStation(s, unlocked); }); };
+  audioA.addEventListener('loadedmetadata', ()=> applyPendingOffset(audioA));
+  audioB.addEventListener('loadedmetadata', ()=> applyPendingOffset(audioB));
+  const onEnded=()=>{
+    // track ended before slot — don't replay snippet, wait for next slot
+    fetchStation().then(s=>{
+      if(!s) return;
+      if(s.slot===lastSlot) return; // same slot, would cause snippet loop — wait
+      applyStation(s, unlocked);
+    });
+  };
   audioA.addEventListener('ended', onEnded); audioB.addEventListener('ended', onEnded);
 }
 init();
