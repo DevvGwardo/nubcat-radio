@@ -158,6 +158,17 @@ function applyStation(s, shouldPlay){
   currentStation=s;
   const idx=queue.findIndex(x=>x.file===t.file);
   if(idx>=0) pos=idx;
+  // preload next slot 12s before end to avoid gap
+  if(unlocked && s.offset > 168 && !s._prefetched){
+    s._prefetched=true;
+    fetch('/api/station?peek=15&v='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(d=>{
+      if(d.station && d.station.track && d.station.track.file!==t.file){
+        // warm browser cache for next audio
+        fetch('audio/'+d.station.track.file, {method:'HEAD', cache:'force-cache'}).catch(()=>{});
+        const pre = new Audio(); pre.preload='metadata'; pre.src='audio/'+d.station.track.file; pre.load();
+      }
+    }).catch(()=>{});
+  }
   const alreadyActive = active.src && active.src.endsWith(t.file);
   if(alreadyActive){
     // same file but new slot (edge case after reboot) — gentle sync only
@@ -175,19 +186,28 @@ function applyStation(s, shouldPlay){
     ensureGraph(); if(ctx.state==='suspended') ctx.resume();
     const start=()=>{
       applyPendingOffset(target);
-      if(unlocked && other.src && !other.paused && other.duration){
+      if(unlocked){
+        ensureGraph(); if(ctx.state==='suspended') ctx.resume();
         const fromGain = other===audioA?gainA:gainB, toGain = target===audioA?gainA:gainB;
-        // start target silent, ensure it plays
-        toGain.gain.value=0; fromGain.gain.value=1;
+        const hasOtherAudio = other.src && !other.paused && other.duration && !other.ended;
+        toGain.gain.value=0;
+        if(!hasOtherAudio) fromGain.gain.value=0;
+        else fromGain.gain.value=1;
         target.play().then(()=>{
-          equalPowerCrossfade(fromGain, toGain, 5, ()=>{
+          if(hasOtherAudio){
+            equalPowerCrossfade(fromGain, toGain, 5, ()=>{
+              try{ other.pause(); other.removeAttribute('src'); other.load(); }catch(e){}
+              active=target; inactive=other;
+            });
+          } else {
+            // no active audio to fade from — just snap gains to new target, no gap
+            toGain.gain.value=1; fromGain.gain.value=0;
             try{ other.pause(); other.removeAttribute('src'); other.load(); }catch(e){}
             active=target; inactive=other;
-          });
+          }
         }).catch(()=> target.play().catch(()=>{}));
       } else {
         try{ other.pause(); }catch(e){}
-        // set gains for non-crossfade case
         if(target===audioA){ gainA.gain.value=1; gainB.gain.value=0; } else { gainA.gain.value=0; gainB.gain.value=1; }
         target.play().then(()=>{ active=target; inactive=other; }).catch(()=>{});
       }

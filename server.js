@@ -49,17 +49,20 @@ function buildStationQueue() {
     console.log(`station queue: +${newTracks.length} new tracks → ${stationQueue.length} total`);
   }
 }
+let slotCount = 0;
 buildStationQueue();
+slotCount = stationQueue.length; // freeze for slot math — new uploads don't shift current cycle
 // stable check every 60s — only appends new files, never reshuffles existing order (fixes snippet loop)
 setInterval(buildStationQueue, 60000);
 
 function getStation() {
   if (!stationQueue.length) return null;
   const nowSec = Date.now() / 1000;
-  const slot = Math.floor(nowSec / SLOT_SEC) % stationQueue.length;
+  const len = slotCount || stationQueue.length;
+  const slot = Math.floor(nowSec / SLOT_SEC) % len;
   const offset = nowSec % SLOT_SEC;
   const track = stationQueue[slot];
-  return { slot, offset: Math.floor(offset), track, queueLength: stationQueue.length };
+  return { slot, offset: Math.floor(offset), track, queueLength: stationQueue.length, slotCount: len };
 }
 
 // ---- listener counting (SSE + heartbeat GC) ----
@@ -80,15 +83,17 @@ app.get("/api/listeners", (req, res) => {
   const id = Math.random().toString(36).slice(2);
   listeners.set(id, Date.now());
   const send = () => {
+    listeners.set(id, Date.now()); // keep alive — prevents GC drop mid-song
     const station = getStation();
     const payload = JSON.stringify({ listeners: listeners.size, station, t: Date.now() });
     res.write(`data: ${payload}\n\n`);
   };
-  // send initial comment to establish stream (helps proxies)
+  // send initial comment to establish stream (helps proxies) + keepalive pings
   res.write(":ok\n\n");
   send();
   const iv = setInterval(send, 3000);
-  req.on("close", () => { clearInterval(iv); listeners.delete(id); });
+  const keepalive = setInterval(()=> res.write(":keepalive\n\n"), 15000);
+  req.on("close", () => { clearInterval(iv); clearInterval(keepalive); listeners.delete(id); });
 });
 
 // handle favicon without 404 noise
@@ -97,7 +102,17 @@ app.get("/favicon.ico", (req, res) => res.status(204).end());
 // REST: current station for initial fetch and for clients that don't want SSE
 app.get("/api/station", (req, res) => {
   res.set("Access-Control-Allow-Origin", "*");
-  const station = getStation();
+  const peek = parseInt(req.query.peek, 10);
+  let station = getStation();
+  if (!isNaN(peek) && peek>0 && station) {
+    // peek ahead: compute what slot will be in peek seconds
+    const nowSec = Date.now() / 1000 + peek;
+    const len = slotCount || stationQueue.length;
+    const slot = Math.floor(nowSec / SLOT_SEC) % len;
+    const offset = nowSec % SLOT_SEC;
+    const track = stationQueue[slot];
+    station = { slot, offset: Math.floor(offset), track, queueLength: stationQueue.length, slotCount: len };
+  }
   res.json({ listeners: listeners.size, station, slotSec: SLOT_SEC });
 });
 
