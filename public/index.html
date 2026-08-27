@@ -13,8 +13,8 @@ body{
   font-family:"Poppins",system-ui,sans-serif;
   background: radial-gradient(900px 500px at 50% 0%, #b7d9fe 0%, transparent 55%),
               linear-gradient(180deg,#9ecdff 0%, #7eb6f5 100%);
-  color:#1a3d6b; display:flex; align-items:center; justify-content:center;
-  padding:16px; min-height:100dvh;
+  color:#1a3d6b; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:16px; min-height:100dvh; gap:18px;
 }
 .card{
   width:100%; max-width:340px;
@@ -58,6 +58,16 @@ h1{font-size:28px; font-weight:800; letter-spacing:-.03em; margin:14px 0 4px}
 .vol-slider{ width:100%; -webkit-appearance:none; appearance:none; height:6px; background:#d6e6ff; border-radius:999px; outline:none; }
 .vol-slider::-webkit-slider-thumb{ -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:#2f7ed8; cursor:pointer; box-shadow:0 2px 6px rgba(47,126,216,.4); }
 .vol-slider::-moz-range-thumb{ width:18px; height:18px; border-radius:50%; background:#2f7ed8; cursor:pointer; border:none; }
+.nub-footer{
+  display:inline-flex; align-items:center; gap:10px;
+  background:rgba(255,255,255,.92); border:1px solid rgba(26,61,107,.12);
+  padding:6px 14px 6px 6px; border-radius:999px; text-decoration:none;
+  color:#1a3d6b; font-size:12px; font-weight:600; box-shadow:0 8px 20px rgba(26,61,107,.12);
+  transition:transform .15s, box-shadow .2s;
+}
+.nub-footer:hover{ transform:translateY(-2px); box-shadow:0 12px 28px rgba(26,61,107,.18); }
+.mascot{ width:36px; height:36px; border-radius:50%; object-fit:cover; background:#fff; border:1px solid rgba(26,61,107,.08); animation:float 3s ease-in-out infinite; }
+@keyframes float{ 0%,100%{transform:translateY(0) rotate(-1deg)} 50%{transform:translateY(-6px) rotate(1deg)} }
 </style>
 </head>
 <body>
@@ -82,6 +92,10 @@ h1{font-size:28px; font-weight:800; letter-spacing:-.03em; margin:14px 0 4px}
   </div>
   <div class="count" id="countExtra">everyone hears the same stream</div>
 </main>
+<a href="https://waitlist.nub.lol" target="_blank" rel="noopener" class="nub-footer" aria-label="tool by nub agent — join waitlist">
+  <img src="mascot.png" alt="nubcat mascot" class="mascot" loading="lazy" />
+  <span>tool by <strong>nub agent</strong></span>
+</a>
 <audio id="audio" preload="none" crossorigin="anonymous"></audio>
 <script>
 const audio=document.getElementById('audio');
