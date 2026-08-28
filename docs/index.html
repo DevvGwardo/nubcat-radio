@@ -5,194 +5,382 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#9ecdff">
 <title>nubcat radio — live</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;800&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="mascot.png">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@19.1.0",
+    "react/jsx-runtime": "https://esm.sh/react@19.1.0/jsx-runtime",
+    "react-dom/client": "https://esm.sh/react-dom@19.1.0/client"
+  }
+}
+</script>
 <style>
+/* ── nub / nubapp v2 tokens (maiavm-desktop index.css, verbatim values) ── */
+:root{
+  --ca-canvas:#9ecdff;
+  --ca-canvas-deep:#7eb6f5;
+  --ca-brand-tint:#b7d9fe;
+  --ca-ink:#1a3d6b;
+  --ca-ink-muted:#5a7aa0;
+  --ca-primary:#2f7ed8;
+  --ca-primary-hover:#2569b8;
+  --ca-primary-soft:#d6e9fb;
+  --ca-pink-soft:#ffe4ef;
+  --ca-border:rgba(26,61,107,.12);
+  --ca-border-strong:rgba(26,61,107,.22);
+  --ca-shadow:0 8px 28px rgba(26,61,107,.12);
+  --ca-shadow-soft:0 2px 10px rgba(26,61,107,.08);
+  --ca-danger:#e24b6a;
+  --ca-success:#1f9d6a;
+  --ca-warn:#e6a23c;
+  --ca-radius:16px;
+  --ca-font:"Poppins",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --ca-ease:cubic-bezier(.22,1,.36,1);
+}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 body{
-  font-family:"Poppins",system-ui,sans-serif;
-  background: radial-gradient(900px 500px at 50% 0%, #b7d9fe 0%, transparent 55%),
-              linear-gradient(180deg,#9ecdff 0%, #7eb6f5 100%);
-  color:#1a3d6b; display:flex; flex-direction:column; align-items:center; justify-content:center;
-  padding:16px; min-height:100dvh; gap:18px;
+  font-family:var(--ca-font);
+  color:var(--ca-ink);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:16px;padding:16px;min-height:100dvh;
+  -webkit-font-smoothing:antialiased;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, var(--ca-brand-tint) 0%, transparent 55%),
+    radial-gradient(900px 500px at 90% 0%, var(--ca-pink-soft) 0%, transparent 50%),
+    linear-gradient(180deg, var(--ca-canvas) 0%, var(--ca-canvas-deep) 100%);
 }
-.card{
-  width:100%; max-width:340px;
-  background:#fff; border:1px solid rgba(26,61,107,.12);
-  border-radius:22px; box-shadow:0 16px 40px rgba(26,61,107,.15);
-  padding:28px 24px 22px; text-align:center;
+
+/* ── player: desktop-app window card ─────────────────────────────────── */
+.player{
+  width:100%;max-width:360px;
+  background:var(--ca-card,#fff);
+  border:1px solid var(--ca-border);
+  border-radius:var(--ca-radius);
+  box-shadow:var(--ca-shadow);
+  overflow:hidden;
 }
-.badge{
-  display:inline-flex; align-items:center; gap:7px;
-  font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
-  color:#5a7aa0; background:#f2f7ff; border:1px solid rgba(26,61,107,.08);
-  padding:5px 10px; border-radius:999px;
+/* faux window chrome — maiavm faux-desktop__window-bar */
+.window-bar{
+  height:34px;display:flex;align-items:center;gap:12px;
+  padding:0 14px;background:#e5ecf5;border-bottom:1px solid var(--ca-border);
 }
-.dot{width:8px;height:8px;border-radius:50%;background:#e24b6a;animation:pl 1.4s infinite}
-@keyframes pl{0%,100%{opacity:1}50%{opacity:.45}}
-h1{font-size:28px; font-weight:800; letter-spacing:-.03em; margin:14px 0 4px}
-.sub{font-size:12px; color:#5a7aa0; min-height:16px; line-height:1.4}
-.track{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#2f7ed8; margin-top:10px; min-height:14px}
-.controls{
-  margin:22px auto 0; display:flex; gap:12px; justify-content:center; align-items:center;
+.traffic{display:flex;gap:6px}
+.traffic i{width:10px;height:10px;border-radius:50%;display:block}
+.traffic i:nth-child(1){background:var(--ca-danger)}
+.traffic i:nth-child(2){background:var(--ca-warn)}
+.traffic i:nth-child(3){background:var(--ca-success)}
+.window-title{
+  flex:1;text-align:center;font-size:10px;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--ca-ink-muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-.btn-square{
-  border:none; cursor:pointer; display:flex; align-items:center; justify-content:center;
-  background:linear-gradient(135deg,#4d97f0,#2f7ed8); color:#fff;
-  box-shadow:0 8px 20px rgba(47,126,216,.35); transition:transform .15s, opacity .3s, background .2s;
+
+/* mascot stage — maiavm chat-wall--sky + haze, darker sky so the
+   #b7d9ff nubcat orb reads against it (per maiavm index.css) */
+.stage{
+  position:relative;margin:14px 14px 0;height:168px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  background:
+    repeating-linear-gradient(-32deg, rgba(26,61,107,.07) 0 1px, transparent 1px 8px),
+    radial-gradient(1200px 600px at 10% -10%, var(--ca-brand-tint) 0%, transparent 55%),
+    radial-gradient(900px 500px at 90% 0%, var(--ca-pink-soft) 0%, transparent 50%),
+    linear-gradient(180deg, #4f8ec8 0%, #2f6eae 100%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);
 }
-.btn-square:hover{transform:scale(1.03)}
-.btn-square:active{transform:scale(.97)}
-.btn-play{ width:84px; height:84px; border-radius:16px; }
-.btn-vol{ width:48px; height:48px; border-radius:12px; background:#fff; color:#2f7ed8; border:1.5px solid rgba(26,61,107,.14); box-shadow:0 6px 16px rgba(26,61,107,.12); }
-.btn-vol.active{ background:#2f7ed8; color:#fff; border-color:#2f7ed8; }
-.label{font-size:12px; font-weight:600; color:#5a7aa0; margin-top:12px; transition:opacity .3s}
-.count{font-size:11px; color:#8aa0c0; margin-top:14px}
-.live{font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#e24b6a; margin-top:8px; opacity:0; transition:opacity .3s}
+.mascot-hero{animation:float 3.4s var(--ca-ease) infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.mascot-host{position:relative;display:inline-block;line-height:0}
+.mascot-fallback{display:block;border-radius:50%}
+[data-engine=on] .mascot-fallback{display:none}
+
+/* stage chips */
+.chip{
+  position:absolute;top:10px;display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.92);border:1px solid rgba(255,255,255,.55);
+  border-radius:999px;padding:4px 10px;
+  font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ca-ink);box-shadow:0 2px 10px rgba(26,61,107,.18);
+}
+.chip-live{left:10px;color:var(--ca-danger)}
+.chip-live .dot{width:7px;height:7px;border-radius:999px;background:var(--ca-danger);animation:status-pulse 1.6s var(--ca-ease) infinite}
+@keyframes status-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.25);opacity:.7}}
+.chip-listeners{right:10px;color:var(--ca-ink-muted);transition:opacity .3s}
+
+/* ── content ─────────────────────────────────────────────────────────── */
+.content{padding:18px 20px 20px;text-align:center}
+.track{font-size:17px;font-weight:700;letter-spacing:-.02em;min-height:24px;line-height:1.3}
+.genre{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ca-primary);margin-top:4px;min-height:15px}
+
+/* equalizer — maiavm ca-voice-bars pattern, keyframe-driven */
+.eq{display:inline-flex;align-items:flex-end;gap:3px;height:16px;margin-top:14px}
+.eq span{width:3px;height:100%;border-radius:999px;background:var(--ca-primary);transform-origin:bottom;transform:scaleY(.15);transition:transform .4s var(--ca-ease)}
+.playing .eq span{animation:eq-b 1s ease-in-out infinite}
+.playing .eq span:nth-child(1){animation-delay:0s}
+.playing .eq span:nth-child(2){animation-delay:.18s}
+.playing .eq span:nth-child(3){animation-delay:.36s}
+.playing .eq span:nth-child(4){animation-delay:.09s}
+.playing .eq span:nth-child(5){animation-delay:.27s}
+@keyframes eq-b{0%,100%{transform:scaleY(.18)}50%{transform:scaleY(1)}}
+
+/* controls — maiavm nub-btn-primary pills */
+.controls{margin:18px auto 0;display:flex;gap:12px;justify-content:center;align-items:center}
+.btn{
+  border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:transform .15s var(--ca-ease),background .2s,box-shadow .2s;
+}
+.btn:hover{transform:scale(1.04)}
+.btn:active{transform:scale(.94)}
+.btn-play{
+  width:60px;height:60px;border-radius:999px;
+  background:var(--ca-primary);color:#fff;
+  box-shadow:0 6px 16px rgba(47,126,216,.35);
+}
+.btn-play:hover{background:var(--ca-primary-hover)}
+.btn-vol{
+  width:46px;height:46px;border-radius:999px;
+  background:#fff;color:var(--ca-primary);
+  border:1.5px solid var(--ca-border-strong);box-shadow:var(--ca-shadow-soft);
+}
+.btn-vol.active{background:var(--ca-primary);color:#fff;border-color:var(--ca-primary)}
+
+/* volume panel — nub-card */
 .vol-wrap{
-  margin:14px auto 0; max-width:260px; background:#f2f7ff; border:1px solid rgba(26,61,107,.08);
-  border-radius:12px; padding:12px 14px; display:none; text-align:left;
+  margin:16px auto 0;background:var(--ca-primary-soft);
+  border:1px solid var(--ca-border);border-radius:10px;
+  padding:12px 14px;display:none;text-align:left;
 }
-.vol-wrap.open{ display:block; }
-.vol-head{ display:flex; justify-content:space-between; align-items:center; font-size:11px; font-weight:600; color:#5a7aa0; letter-spacing:.06em; text-transform:uppercase; margin-bottom:8px; }
-.vol-slider{ width:100%; -webkit-appearance:none; appearance:none; height:6px; background:#d6e6ff; border-radius:999px; outline:none; }
-.vol-slider::-webkit-slider-thumb{ -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:#2f7ed8; cursor:pointer; box-shadow:0 2px 6px rgba(47,126,216,.4); }
-.vol-slider::-moz-range-thumb{ width:18px; height:18px; border-radius:50%; background:#2f7ed8; cursor:pointer; border:none; }
+.vol-wrap.open{display:block;animation:panel-in 180ms var(--ca-ease) both}
+@keyframes panel-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.vol-head{display:flex;justify-content:space-between;align-items:center;font-size:10px;font-weight:700;color:var(--ca-ink-muted);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px}
+.vol-slider{width:100%;-webkit-appearance:none;appearance:none;height:6px;background:#b7d5f6;border-radius:999px;outline:none}
+.vol-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--ca-primary);cursor:pointer;box-shadow:0 2px 6px rgba(47,126,216,.4)}
+.vol-slider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--ca-primary);cursor:pointer;border:none}
+
+.status{font-size:12px;font-weight:600;color:var(--ca-ink-muted);margin-top:14px;min-height:16px;transition:opacity .3s}
+.count{font-size:10px;font-weight:600;letter-spacing:.04em;color:#8aa0c0;margin-top:6px}
+
+/* ── footer pill — glass, mini framed mascot ─────────────────────────── */
 .nub-footer{
-  display:inline-flex; align-items:center; gap:10px;
-  background:rgba(255,255,255,.92); border:1px solid rgba(26,61,107,.12);
-  padding:6px 14px 6px 6px; border-radius:999px; text-decoration:none;
-  color:#1a3d6b; font-size:12px; font-weight:600; box-shadow:0 8px 20px rgba(26,61,107,.12);
-  transition:transform .15s, box-shadow .2s;
+  display:inline-flex;align-items:center;gap:10px;text-decoration:none;
+  background:rgba(255,255,255,.72);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,.55);box-shadow:var(--ca-shadow-soft);
+  padding:5px 14px 5px 5px;border-radius:999px;
+  color:var(--ca-ink);font-size:12px;font-weight:600;
+  transition:transform .15s var(--ca-ease),box-shadow .2s;
 }
-.nub-footer:hover{ transform:translateY(-2px); box-shadow:0 12px 28px rgba(26,61,107,.18); }
-.mascot{ width:36px; height:36px; border-radius:50%; object-fit:cover; background:#fff; border:1px solid rgba(26,61,107,.08); animation:float 3s ease-in-out infinite; }
-@keyframes float{ 0%,100%{transform:translateY(0) rotate(-1deg)} 50%{transform:translateY(-6px) rotate(1deg)} }
+.nub-footer:hover{transform:translateY(-2px);box-shadow:var(--ca-shadow)}
+.mascot-chip{
+  width:30px;height:30px;border-radius:9px;background:var(--ca-ink);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;
+}
+
+@media (prefers-reduced-motion:reduce){
+  .mascot-hero,.chip-live .dot,.eq span{animation:none !important}
+}
 </style>
 </head>
 <body>
-<main class="card" aria-label="nubcat radio">
-  <span class="badge"><span class="dot"></span><span id="listeners">— listening</span></span>
-  <h1>nubcat radio</h1>
-  <div class="sub" id="sub">live • true broadcast</div>
-  <div class="track" id="track">&nbsp;</div>
-  <div class="live" id="live">● live</div>
-  <div class="controls" id="controls">
-    <button class="btn-square btn-play" id="playBtn" aria-label="tap to listen">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-    </button>
-    <button class="btn-square btn-vol" id="volBtn" aria-label="volume">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-    </button>
+<main class="player" aria-label="nubcat radio">
+  <div class="window-bar" aria-hidden="true">
+    <span class="traffic"><i></i><i></i><i></i></span>
+    <span class="window-title">nubcat radio — live broadcast</span>
   </div>
-  <div class="label" id="label">tap to listen</div>
-  <div class="vol-wrap" id="volWrap">
-    <div class="vol-head"><span>volume</span><span id="volPct">100%</span></div>
-    <input class="vol-slider" id="volSlider" type="range" min="0" max="100" value="100" />
+
+  <div class="stage" id="stage">
+    <span class="chip chip-live"><span class="dot"></span>live</span>
+    <span class="chip chip-listeners" id="listeners">— listening</span>
+    <div class="mascot-hero">
+      <span class="mascot-host" data-mascot="132">
+        <img src="mascot.png" alt="nubcat mascot" class="mascot-fallback" width="132" height="132">
+      </span>
+    </div>
   </div>
-  <div class="count" id="countExtra">everyone hears the same stream</div>
+
+  <div class="content">
+    <div class="track" id="track">&nbsp;</div>
+    <div class="genre" id="genre">&nbsp;</div>
+    <div class="eq" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+
+    <div class="controls">
+      <button class="btn btn-play" id="playBtn" aria-label="tap to listen">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+      </button>
+      <button class="btn btn-vol" id="volBtn" aria-label="volume">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+      </button>
+    </div>
+
+    <div class="vol-wrap" id="volWrap">
+      <div class="vol-head"><span>volume</span><span id="volPct">100%</span></div>
+      <input class="vol-slider" id="volSlider" type="range" min="0" max="100" value="100" />
+    </div>
+
+    <div class="status" id="statusEl">tap to listen</div>
+    <div class="count" id="countExtra">everyone hears the same stream</div>
+  </div>
 </main>
+
 <a href="https://waitlist.nub.lol" target="_blank" rel="noopener" class="nub-footer" aria-label="tool by nub agent — join waitlist">
-  <img src="mascot.png" alt="nubcat mascot" class="mascot" loading="lazy" />
+  <span class="mascot-chip">
+    <span class="mascot-host" data-mascot="22">
+      <img src="mascot.png" alt="" class="mascot-fallback" width="22" height="22" style="border-radius:0">
+    </span>
+  </span>
   <span>tool by <strong>nub agent</strong></span>
 </a>
+
 <audio id="audio" preload="none" crossorigin="anonymous"></audio>
+
+<script type="module" src="mascot.js"></script>
 <script>
 const audio=document.getElementById('audio');
+const root=document.body;
 const els={
   listeners:document.getElementById('listeners'),
-  sub:document.getElementById('sub'),
   track:document.getElementById('track'),
+  genre:document.getElementById('genre'),
   playBtn:document.getElementById('playBtn'),
   volBtn:document.getElementById('volBtn'),
-  label:document.getElementById('label'),
+  status:document.getElementById('statusEl'),
   extra:document.getElementById('countExtra'),
-  live:document.getElementById('live'),
   volWrap:document.getElementById('volWrap'),
   volSlider:document.getElementById('volSlider'),
   volPct:document.getElementById('volPct')
 };
+const ICON_PLAY='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
+const ICON_PAUSE='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>';
+const ICON_VOL='<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>';
+const ICON_MUTE='<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>';
+
 let unlocked=false;
 let volOpen=false;
+let playing=false;
+let lastTrackFile=null;
+const mascot=()=>window.nubMascot;
+
+// mascot gaze follows the pointer (engine takes screen-space coords)
+let gazeQueued=false;
+addEventListener('pointermove',e=>{
+  if(gazeQueued) return; gazeQueued=true;
+  requestAnimationFrame(()=>{
+    gazeQueued=false;
+    mascot()?.setGaze({x:e.clientX,y:e.clientY});
+  });
+},{passive:true});
+
 function updateListeners(n, streamN){
-  const total = typeof streamN==='number' ? streamN : n;
-  els.listeners.textContent = (total===1?'1 listening': total+' listening');
+  const total=typeof streamN==='number'?streamN:n;
+  els.listeners.textContent=(total===1?'1 listening':total+' listening');
 }
 function setTrack(t){
-  if(!t){ els.track.textContent='\u00a0'; els.sub.textContent='live • true broadcast'; return; }
-  els.track.textContent = t.file.replace('.mp3','').replace(/-/g,' ');
-  els.sub.textContent = t.genre.replace(/-/g,' ');
+  if(!t){ els.track.textContent='nubcat radio'; els.genre.textContent='live \u2022 true broadcast'; return; }
+  const name=t.file.replace('.mp3','').replace(/-/g,' ');
+  els.track.textContent=name;
+  els.genre.textContent=t.genre.replace(/-/g,' ');
+  if(lastTrackFile && lastTrackFile!==t.file && playing){
+    mascot()?.flash('happy',1600);
+    mascot()?.bounce();
+  }
+  lastTrackFile=t.file;
 }
 async function fetchNow(){
   try{
     const r=await fetch('/api/nowplaying?v='+Date.now(),{cache:'no-store'});
     const d=await r.json();
-    if(typeof d.streamListeners==='number' || typeof d.listeners==='number') updateListeners(d.listeners, d.streamListeners);
+    if(typeof d.streamListeners==='number'||typeof d.listeners==='number') updateListeners(d.listeners,d.streamListeners);
     const b=d.broadcast;
-    if(b && b.track) setTrack(b.track);
-    else if(d.station && d.station.track) setTrack(d.station.track);
+    if(b&&b.track) setTrack(b.track);
+    else if(d.station&&d.station.track) setTrack(d.station.track);
   }catch(e){}
 }
-fetchNow(); setInterval(fetchNow, 4000);
+fetchNow(); setInterval(fetchNow,4000);
 try{
   const es=new EventSource('/api/listeners');
   es.onmessage=e=>{
     try{
       const d=JSON.parse(e.data);
-      if(typeof d.listeners==='number') updateListeners(d.listeners, d.broadcast?d.streamListeners:d.listeners);
+      if(typeof d.listeners==='number') updateListeners(d.listeners,d.broadcast?d.streamListeners:d.listeners);
       const b=d.broadcast;
-      if(b && b.track) setTrack(b.track);
-      else if(d.station && d.station.track) setTrack(d.station.track);
+      if(b&&b.track) setTrack(b.track);
+      else if(d.station&&d.station.track) setTrack(d.station.track);
     }catch{}
   };
 }catch(e){}
+
 // volume
 function setVolume(v){
-  const vol = Math.max(0, Math.min(100, v))/100;
-  audio.volume = vol;
-  els.volSlider.value = Math.round(vol*100);
-  els.volPct.textContent = Math.round(vol*100)+'%';
-  try{ localStorage.setItem('nubradio_vol', String(Math.round(vol*100))); }catch(e){}
-  // icon mute state
-  if(vol===0) els.volBtn.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>';
-  else els.volBtn.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>';
+  const vol=Math.max(0,Math.min(100,v))/100;
+  audio.volume=vol;
+  els.volSlider.value=Math.round(vol*100);
+  els.volPct.textContent=Math.round(vol*100)+'%';
+  els.volBtn.innerHTML=vol===0?ICON_MUTE:ICON_VOL;
+  try{localStorage.setItem('nubradio_vol',String(Math.round(vol*100)))}catch(e){}
 }
-try{ const saved=parseInt(localStorage.getItem('nubradio_vol'),10); if(!isNaN(saved)) setVolume(saved); }catch(e){}
-els.volSlider.addEventListener('input', ()=> setVolume(parseInt(els.volSlider.value,10)));
+try{const saved=parseInt(localStorage.getItem('nubradio_vol'),10); if(!isNaN(saved)) setVolume(saved);}catch(e){}
+els.volSlider.addEventListener('input',()=>setVolume(parseInt(els.volSlider.value,10)));
 els.volBtn.onclick=()=>{
   volOpen=!volOpen;
-  els.volWrap.classList.toggle('open', volOpen);
-  els.volBtn.classList.toggle('active', volOpen);
+  els.volWrap.classList.toggle('open',volOpen);
+  els.volBtn.classList.toggle('active',volOpen);
 };
+
+// play / pause
 els.playBtn.onclick=()=>{
   if(unlocked){
-    // toggle play/pause for true stream
-    if(audio.paused){ audio.play().catch(()=>{}); els.playBtn.innerHTML='<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>'; els.label.textContent='playing • live'; }
-    else { audio.pause(); els.playBtn.innerHTML='<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>'; els.label.textContent='paused'; }
+    if(audio.paused){
+      audio.play().catch(()=>{});
+      els.playBtn.innerHTML=ICON_PAUSE;
+      els.status.textContent='playing \u2022 live';
+      playing=true; root.classList.add('playing');
+      mascot()?.setState('listening'); mascot()?.bounce();
+    }else{
+      audio.pause();
+      els.playBtn.innerHTML=ICON_PLAY;
+      els.status.textContent='paused \u2014 tap to resume';
+      playing=false; root.classList.remove('playing');
+      mascot()?.setState('sleeping');
+    }
     return;
   }
   unlocked=true;
+  els.status.textContent='connecting\u2026';
+  mascot()?.setState('loading');
   audio.src='/stream?v='+Date.now();
   audio.crossOrigin='anonymous';
   setVolume(parseInt(els.volSlider.value,10));
   audio.play().then(()=>{
-    els.playBtn.innerHTML='<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>';
-    els.label.textContent='playing • live';
-    els.live.style.opacity='1';
-    els.extra.textContent='live stream • everyone hears the same';
+    playing=true; root.classList.add('playing');
+    els.playBtn.innerHTML=ICON_PAUSE;
+    els.status.textContent='playing \u2022 live';
+    els.extra.textContent='live stream \u2022 everyone hears the same';
+    mascot()?.setState('listening'); mascot()?.burst();
   }).catch(err=>{
-    unlocked=false;
-    els.extra.textContent='tap again — browser blocked autoplay';
+    unlocked=false; playing=false;
+    els.status.textContent='tap to listen';
+    els.extra.textContent='tap again \u2014 browser blocked autoplay';
+    mascot()?.setState('surprised');
+    setTimeout(()=>{ if(!playing) mascot()?.setState('idle'); },1800);
   });
 };
-audio.addEventListener('error', ()=>{
+
+// stream drop → reconnect
+audio.addEventListener('error',()=>{
   if(unlocked){
-    els.extra.textContent='reconnecting…';
-    setTimeout(()=>{ audio.src='/stream?v='+Date.now(); audio.play().catch(()=>{}); }, 1500);
+    els.status.textContent='reconnecting\u2026';
+    mascot()?.setState('searching');
+    setTimeout(()=>{ audio.src='/stream?v='+Date.now(); audio.play().catch(()=>{}); },1500);
   }
 });
-audio.addEventListener('stalled', ()=>{ if(unlocked) fetchNow(); });
-audio.addEventListener('play', ()=>{ if(unlocked){ els.live.style.opacity='1'; }});
+audio.addEventListener('playing',()=>{
+  playing=true; root.classList.add('playing');
+  els.playBtn.innerHTML=ICON_PAUSE;
+  els.status.textContent='playing \u2022 live';
+  mascot()?.setState('listening');
+});
+audio.addEventListener('stalled',()=>{ if(unlocked) fetchNow(); });
 </script>
 </body>
 </html>
